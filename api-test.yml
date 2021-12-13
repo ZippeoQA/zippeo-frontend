@@ -1,0 +1,421 @@
+openapi: 3.0.1
+info:
+  title: Zippeo
+  version: 1.13.1
+  license: 
+    name: MIT
+servers:
+  - url: https://app.zippeo.io/api
+  - url: https://testing.app.zippeo.io/api
+  - url: https://stage.app.zippeo.io/api
+paths:
+  /auth/register:
+    post:
+      tags:
+        - without params
+        - without auth
+      summary: Registers a new user
+      operationId: auth.register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                surName:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                invitationToken:
+                  type: string
+              required:
+                - firstName
+                - surName
+                - email
+                - password
+      responses:
+        200:
+          description: A new session is created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    
+  /organizations:
+    post:
+      tags:
+        - bearer auth
+      summary: Create organization
+      operationId: organizations.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: ACME
+              required:
+                - name
+      responses:
+        200:
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+      security:
+        - BearerAuth: []
+        
+  /apps:
+    get:
+      tags:
+        - without params
+      summary: List apps
+      operationId: apps.list
+      responses:
+        200:
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                      example: website
+                    externalType:
+                      type: string
+                      example: jira
+                    organization:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+      security:
+        - BearerAuth: []
+  /apps/{id}:
+    get:
+      tags:
+        - required path param
+        - bearer auth
+      summary: View app
+      operationId: apps.view
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Apps id
+      responses:
+        200:
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                    example: website
+                  externalType:
+                    type: string
+                    example: jira
+      security:
+        - BearerAuth: []
+        
+        
+  /apps/{id}/apis:
+    get:
+      tags:
+        - required path param
+      summary: Get the connected APIs for this app
+      operationId: apps.apis
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Apps id
+      responses:
+        200:
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    type:
+                      type: string
+                    info:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        uploadFilename:
+                          type: string
+                        specType:
+                          type: string
+                        specVersion:
+                          type: string
+                      additionalProperties: true
+                    updatedAt:
+                      type: string
+                    isDemo:
+                      type: boolean
+                    inSync:
+                      type: boolean
+                      description: Only for apis, which are synced in background
+                    syncError:
+                      type: string
+                      description: Only for apis, which are synced in background
+      security:
+        - BearerAuth: []
+        
+  /apps/{id}/apis/operations:
+    get:
+      tags:
+        - with required param and with required/optional query
+      summary: Get the API operations for this app
+      operationId: apps.apiOperations
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Apps id
+        - in: query
+          name: path_key
+          schema:
+            type: string
+          required: false
+          description: Only show operations where the path key exists in their url
+        - in: query
+          name: include_deleted
+          schema:
+            type: boolean
+          required: true
+          description: Show deleted operations as well
+      responses:
+        200:
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiOperation'
+      security:
+        - BearerAuth: []
+        
+  /apps/{id}/apis/operations/{v2}:
+    get:
+      tags:
+        - with required param and required query
+      summary: Just for frontend testing
+      operationId: apps.apiOperationsV2
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: Apps id
+        - in: path
+          name: v2
+          schema:
+            type: string
+          required: true
+          description: Just a placeholder for testing
+        - in: query
+          name: path_key
+          schema:
+            type: string
+          required: true
+          description: Only show operations where the path key exists in their url
+        - in: query
+          name: include_deleted
+          schema:
+            type: boolean
+          required: true
+          description: Show deleted operations as well
+      responses:
+        200:
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApiOperation'
+
+      security:
+        - BearerAuth: []
+        
+  /event-feed/history:
+    get:
+      tags:
+        - with optional params
+        - bearer auth
+      summary: List historical events from the feed
+      operationId: eventFeed.history
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+            enum:
+              - pin
+              - team
+              - info
+              - error
+          required: false
+          description: Filter event feed history by a category
+      responses:
+        200:
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalPages:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  currentPage:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        createdAt:
+                          type: string
+                        key:
+                          type: integer
+                        type:
+                          type: string
+                        payload:
+                          type: object
+                          additionalProperties: true
+                        organization:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+      security:
+        - BearerAuth: []
+        
+  /event-feed/history2:
+    get:
+      tags:
+        - api key auth
+      summary: Just for frontend testing
+      operationId: eventFeed.history2
+      responses:
+        200:
+          description: Successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalPages:
+                    type: integer
+                  totalItems:
+                    type: integer
+                  currentPage:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        createdAt:
+                          type: string
+                        key:
+                          type: integer
+                        type:
+                          type: string
+                        payload:
+                          type: object
+                          additionalProperties: true
+                        organization:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+      security:
+        - ApiKeyAuth: []
+components:
+  schemas:
+    ApiOperation:
+      type: object
+      properties:
+        id:
+          type: string
+        method:
+          type: string
+        path:
+          type: string
+        definition:
+          type: object
+          additionalProperties: true
+        external_type:
+          $ref: '#/components/schemas/ApiOperationExternalType'
+        deleted:
+          type: boolean
+        url:
+          type: string
+        apiWishId:
+          type: string
+    ApiOperationExternalType:
+      type: string
+      enum:
+        - github
+        - postman
+    
+  securitySchemes:
+    BearerAuth:            
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  
+        
